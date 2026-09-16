@@ -17,9 +17,13 @@ Ecosistema de automatización para un equipo de selección de personal. Un reclu
 | 5 | Dashboard de control (vista pública de Notion) | [Dashboard · Clasificador de CVs](https://funny-mistake-467.notion.site) |
 | · | Blueprint del flujo (exportado de Make) | [blueprint/clasificador-cvs.blueprint.json](blueprint/clasificador-cvs.blueprint.json) |
 | · | Estructura de datos "Salida clasificador IA" | [blueprint/data-structure-salida-ia.json](blueprint/data-structure-salida-ia.json) |
-| · | Bases de Notion (solo lectura) | [DB1 Candidatos](https://www.notion.so/3b4151a7f4b6806ca98bd99d2bdb8fda) · [DB2 Búsquedas](https://www.notion.so/eb4e0cc854c94913a1a5c155bcd6ec23) · [DB3 Base de conocimiento](https://www.notion.so/d819394f886e47a296f4608089e706f3) · [DB4 Registro de ejecuciones](https://www.notion.so/22c4f43e57054e61973fce1683f32c5a) |
+| · | Bases de Notion (solo lectura) | [DB1 Candidatos](https://funny-mistake-467.notion.site/3b4151a7f4b6806ca98bd99d2bdb8fda) · [DB2 Búsquedas](https://funny-mistake-467.notion.site/eb4e0cc854c94913a1a5c155bcd6ec23) · [DB3 Base de conocimiento](https://funny-mistake-467.notion.site/d819394f886e47a296f4608089e706f3) · [DB4 Registro de ejecuciones](https://funny-mistake-467.notion.site/22c4f43e57054e61973fce1683f32c5a) |
 | · | Capturas de evidencia | [screenshots/](screenshots/) |
 | · | Video demo (3 min) | **PENDIENTE: link** |
+
+### Último paso antes de entregar (2 minutos)
+
+Las cuatro bases cuelgan del Dashboard y ya se abren con los links de arriba, pero Notion sólo le sirve las **filas** a un visitante sin sesión cuando cada base está publicada por su cuenta. Se hace desde la interfaz, una vez por base: botón **Compartir** (arriba a la derecha) → pestaña **Publicar** → **Publicar en la web**, sin permitir duplicados ni indexación en buscadores. Hasta que eso pase, las vistas del dashboard muestran *«No tenés acceso a la base de datos»* a quien entre desde afuera.
 
 Las fuentes HTML de los documentos están en [docs/src/](docs/src/).
 
@@ -100,7 +104,8 @@ Todos los emails de prueba van al Gmail del alumno con alias (`+lucia`, `+martin
 - [x] Filtro anti-bucle y comparaciones con tipos correctos
 - [x] Blueprint exportado desde Make (33 módulos con nombre, leído del scenario después de cargarlo)
 - [x] ≥ 5 ejecuciones + camino infeliz con evidencia (17 ejecuciones exitosas, las 4 rutas recorridas)
-- [x] Dashboard público con KPIs y tasa de errores
+- [x] Dashboard público con KPIs y tasa de errores (página publicada)
+- [ ] Publicar las 4 bases desde la UI de Notion para que las vistas del dashboard carguen datos (2 minutos, ver arriba)
 - [ ] Video de 3 minutos
 
 ## Guion del video (3 minutos)
