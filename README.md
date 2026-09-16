@@ -72,7 +72,7 @@ Se completa con los datos de *History* de Make y de DB4 después de las corridas
 - [x] Filtro anti-bucle y comparaciones con tipos correctos
 - [x] Blueprint exportado desde Make (33 módulos con nombre, leído del scenario después de cargarlo)
 - [ ] ≥ 5 ejecuciones + camino infeliz con evidencia
-- [ ] Dashboard público con KPIs y tasa de errores
+- [x] Dashboard público con KPIs y tasa de errores (5 páginas publicadas: dashboard + 4 bases)
 - [ ] Video de 3 minutos
 
 ## Guion del video (3 minutos)
