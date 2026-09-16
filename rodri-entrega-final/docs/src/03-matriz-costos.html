@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Matriz de costos por tarea · Clasificador de CVs con IA</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<h1>Matriz de costos por tarea</h1>
+<p class="sub">Clasificador de CVs con IA · Entrega Final · Arquitecto de Flujos IA · Rodrigo Benegas</p>
+<div class="meta"><span><b>Moneda:</b> USD</span><span><b>Precios:</b> listas públicas de Groq, OpenAI y Anthropic a septiembre 2026 (ver fuentes)</span><span><b>Volumen base:</b> 200 CVs por mes</span></div>
+
+<h2>1. Supuestos de consumo</h2>
+<table>
+<tr><th>Concepto</th><th class="r">Valor</th><th>De dónde sale</th></tr>
+<tr><td>Tokens de entrada por clasificación</td><td class="r">≈ 1.600</td><td>prompt de sistema (≈ 450) + búsqueda (≈ 150) + candidato con resumen del CV (≈ 500) + contexto RAG, 2-4 entradas (≈ 500)</td></tr>
+<tr><td>Tokens de salida por clasificación</td><td class="r">≈ 350 (tope 700)</td><td>JSON con clasificación, justificación y borrador; <code>max_tokens = 700</code> acota el peor caso</td></tr>
+<tr><td>Llamadas a la IA por candidato</td><td class="r">1</td><td>solo entra a la ruta A la ficha en Pendiente con datos completos; aprobar, rechazar o corregir no vuelve a llamar a la IA</td></tr>
+<tr><td>Operaciones de Make por candidato (ciclo completo)</td><td class="r">≈ 18</td><td>ruta A 9 + retrigger 2 · ruta B 5 + retrigger 2; ruta C ≈ 6; ruta D ≈ 6</td></tr>
+<tr><td>Candidatos por mes</td><td class="r">200</td><td>volumen de referencia de una consultora chica; abajo se muestra también 55 y 2.000</td></tr>
+</table>
+
+<h2>2. Matriz por tarea</h2>
+<table>
+<tr><th>Tarea</th><th>Herramienta / modelo</th><th class="r">Tokens in / out</th><th class="r">Costo unitario</th><th class="r">Vol. mensual</th><th class="r">Costo mensual</th><th>Por qué esta elección</th></tr>
+<tr><td>Detectar fichas nuevas y decidir ruta</td><td>Make · trigger + Router</td><td class="r">—</td><td class="r">2 ops</td><td class="r">≈ 260 ejecuciones</td><td class="r">incluido en el plan</td><td>Lógica determinística; ninguna llamada a la IA para enrutar.</td></tr>
+<tr><td>Validar datos incompletos (ruta D)</td><td>Make · filtros exist/notexist</td><td class="r">0 / 0</td><td class="r">0 USD</td><td class="r">≈ 20 (10 %)</td><td class="r">0,00</td><td>Se resuelve sin IA: ahorro directo del 100 % de esos tokens.</td></tr>
+<tr><td>Recuperar contexto (RAG)</td><td>Notion · Search Objects + Text Aggregator</td><td class="r">—</td><td class="r">2 ops</td><td class="r">180</td><td class="r">0,00</td><td>La API de Notion no cobra; limitar a 10 entradas acota los tokens de entrada.</td></tr>
+<tr><td><b>Clasificar CV + redactar borrador</b></td><td><b>openai/gpt-oss-120b vía Groq</b></td><td class="r">1.600 / 350</td><td class="r">0,00045</td><td class="r">180</td><td class="r"><b>0,08</b></td><td>Modelo GPT open-weight de OpenAI con calidad de razonamiento alta, JSON nativo y el precio más bajo de la tabla de alternativas. Groq responde en &lt; 2 s.</td></tr>
+<tr><td>Parsear y validar la respuesta</td><td>Make · Parse JSON + estructura de datos</td><td class="r">—</td><td class="r">1 op</td><td class="r">180</td><td class="r">0,00</td><td>Validación estructural sin IA.</td></tr>
+<tr><td>Aviso HITL al reclutador</td><td>Gmail · Send an Email</td><td class="r">—</td><td class="r">1 op</td><td class="r">180</td><td class="r">0,00</td><td>Gmail no cobra por API (cuota 500 envíos/día).</td></tr>
+<tr><td>Email al candidato (aprobado / rechazado)</td><td>Gmail · Send an Email</td><td class="r">—</td><td class="r">1 op</td><td class="r">≈ 180</td><td class="r">0,00</td><td>Sale el borrador ya generado: no se vuelve a llamar a la IA.</td></tr>
+<tr><td>Registro y dashboard</td><td>Notion · Create Database Item + vistas</td><td class="r">—</td><td class="r">1 op por paso</td><td class="r">≈ 400</td><td class="r">0,00</td><td>Trazabilidad y KPIs sin costo de API.</td></tr>
+<tr><td>Orquestación (plan de Make)</td><td>Make Free (1.000 ops) / Core (10.000 ops)</td><td class="r">—</td><td class="r">—</td><td class="r">≈ 3.600 ops</td><td class="r">10,59 (Core)</td><td>Con 200 CVs/mes el plan Free no alcanza; hasta ≈ 55 CVs/mes cuesta 0.</td></tr>
+<tr><th colspan="5" class="r">Total mensual estimado (200 CVs)</th><th class="r">≈ 10,67 USD</th><th>La IA es &lt; 1 % del costo: el orquestador domina.</th></tr>
+</table>
+
+<h2>3. Alternativas de modelo para la misma tarea</h2>
+<p>Costo por clasificación con 1.600 tokens de entrada y 350 de salida, y costo mensual para 200 CVs. Los modelos de OpenAI y Anthropic son alternativas válidas para la consigna (GPT o Claude); gpt-oss-120b es un modelo GPT de OpenAI servido por Groq.</p>
+<table>
+<tr><th>Modelo</th><th class="r">USD / 1M entrada</th><th class="r">USD / 1M salida</th><th class="r">Por CV</th><th class="r">200 CVs / mes</th><th class="r">Con Batch (−50 %)</th><th>Cuándo conviene</th></tr>
+<tr><td><b>gpt-oss-120b (Groq)</b> — elegido</td><td class="r">0,15</td><td class="r">0,60</td><td class="r">0,00045</td><td class="r">0,09</td><td class="r">0,045</td><td>Default: mejor relación calidad/precio y latencia mínima.</td></tr>
+<tr><td>gpt-oss-20b (Groq)</td><td class="r">0,075</td><td class="r">0,30</td><td class="r">0,00023</td><td class="r">0,05</td><td class="r">0,02</td><td>Extracción o formateo simple; juicio de CVs algo más flojo.</td></tr>
+<tr><td>GPT-4o mini (OpenAI)</td><td class="r">0,15</td><td class="r">0,60</td><td class="r">0,00045</td><td class="r">0,09</td><td class="r">0,045</td><td>Mismo precio; conviene si ya se usa la plataforma de OpenAI.</td></tr>
+<tr><td>GPT-4.1 mini (OpenAI)</td><td class="r">0,40</td><td class="r">1,60</td><td class="r">0,0012</td><td class="r">0,24</td><td class="r">0,12</td><td>Contexto largo (CVs completos de varias páginas).</td></tr>
+<tr><td>GPT-5 mini (OpenAI)</td><td class="r">0,25</td><td class="r">2,00</td><td class="r">0,0011</td><td class="r">0,22</td><td class="r">0,11</td><td>Segunda opinión sobre los casos "Revisar".</td></tr>
+<tr><td>Claude Haiku 4.5 (Anthropic)</td><td class="r">1,00</td><td class="r">5,00</td><td class="r">0,0034</td><td class="r">0,67</td><td class="r">0,34</td><td>Redacción muy cuidada de los emails; prompt caching −90 % en el system prompt.</td></tr>
+<tr><td>Claude Sonnet 4.5 (Anthropic)</td><td class="r">3,00</td><td class="r">15,00</td><td class="r">0,0100</td><td class="r">2,01</td><td class="r">1,00</td><td>Búsquedas senior donde un falso negativo cuesta caro.</td></tr>
+</table>
+
+<h2>4. Dónde está el ahorro (y cuánto vale)</h2>
+<table>
+<tr><th>Palanca</th><th>Cómo está implementada</th><th class="r">Ahorro estimado</th></tr>
+<tr><td>Una sola llamada a la IA por candidato</td><td>La ruta A exige Estado = Pendiente; aprobar, rechazar o corregir no reclasifica. Sin esta compuerta, cada edición de la ficha (3-4 por candidato) volvería a llamar al modelo.</td><td class="r">≈ 70 % de los tokens</td></tr>
+<tr><td>Camino infeliz sin IA</td><td>Ruta D detecta datos incompletos con filtros y no consume tokens.</td><td class="r">≈ 10 % de las llamadas</td></tr>
+<tr><td>Tope de salida</td><td><code>max_tokens = 700</code>: el peor caso cuesta 0,00042 USD por llamada en vez de un JSON sin límite.</td><td class="r">acota el riesgo</td></tr>
+<tr><td>RAG acotado</td><td>Search Objects trae como máximo 10 entradas y solo las del puesto + "General".</td><td class="r">−30 % de entrada vs. inyectar toda la base</td></tr>
+<tr><td>Modelo por tarea</td><td>gpt-oss-120b para juzgar; los pasos de formateo, validación y enrutado son determinísticos (Make), no IA.</td><td class="r">−85 % vs. usar Sonnet para todo</td></tr>
+<tr><td>Batches</td><td>Groq y OpenAI ofrecen −50 % en modo batch (asincrónico). Con el trigger cada 15 minutos la clasificación ya es diferida: se puede migrar la ruta A a un lote nocturno cuando el volumen supere ≈ 2.000 CVs/mes.</td><td class="r">−50 % del costo de IA (≈ 0,45 USD/mes a 2.000 CVs)</td></tr>
+<tr><td>Prompt caching</td><td>El prompt de sistema y la entrada "General" de la base de conocimiento se repiten en cada llamada (≈ 40 % de la entrada); Groq cobra la entrada cacheada a la mitad.</td><td class="r">≈ −15 % de la entrada</td></tr>
+</table>
+
+<h2>5. Escenarios de volumen</h2>
+<table>
+<tr><th class="r">CVs / mes</th><th class="r">Ops de Make</th><th>Plan de Make</th><th class="r">IA (gpt-oss-120b)</th><th class="r">IA con Batch</th><th class="r">Total mensual</th></tr>
+<tr><td class="r">55</td><td class="r">≈ 1.000</td><td>Free</td><td class="r">0,02</td><td class="r">0,01</td><td class="r">≈ 0,02 USD</td></tr>
+<tr><td class="r">200</td><td class="r">≈ 3.600</td><td>Core (10.000 ops)</td><td class="r">0,09</td><td class="r">0,05</td><td class="r">≈ 10,7 USD</td></tr>
+<tr><td class="r">2.000</td><td class="r">≈ 36.000</td><td>Core 40.000 ops</td><td class="r">0,90</td><td class="r">0,45</td><td class="r">≈ 30 USD</td></tr>
+</table>
+<div class="callout ok"><b>Conclusión.</b> Con el diseño actual el costo de la inteligencia es marginal (menos de 1 USD hasta 2.000 CVs por mes); el costo real es el orquestador. Por eso las decisiones de ahorro apuntan a reducir <i>operaciones</i> (una llamada por candidato, filtros antes de la IA, retrigger acotado a 2 ops) más que a cambiar de modelo. Si se quisiera subir la calidad, la mejora barata es enviar solo los casos "Revisar" (≈ 25 %) a un modelo mayor: +0,05 USD/mes con GPT-5 mini.</div>
+
+<h2>6. Fuentes de precios (septiembre 2026)</h2>
+<ul class="small">
+  <li>Groq — página de precios: gpt-oss-120b 0,15 / 0,60 USD por millón de tokens (entrada cacheada 0,075), gpt-oss-20b 0,075 / 0,30; Batch −50 %.</li>
+  <li>OpenAI — página de precios de la API: GPT-4o mini 0,15 / 0,60; GPT-4.1 mini 0,40 / 1,60; GPT-5 mini 0,25 / 2,00; Batch API −50 %.</li>
+  <li>Anthropic — página de precios: Claude Haiku 4.5 1 / 5; Claude Sonnet 4.5 3 / 15; Batch −50 %; prompt caching hasta −90 % en lectura.</li>
+  <li>Make — planes: Free 1.000 ops/mes e intervalo mínimo 15 min; Core desde 10,59 USD/mes con 10.000 ops.</li>
+</ul>
+<div class="footer">Matriz de costos · Clasificador de CVs con IA · Rodrigo Benegas · septiembre 2026</div>
+</body>
+</html>
