@@ -68,7 +68,7 @@
 <div class="grid2">
   <div class="box"><b class="t">Filtro anti-bucle</b>El trigger observa ítems editados, y Make edita ítems. Cada ruta termina cambiando el Estado (o marcando Notificado) y cada filtro exige el estado anterior, así que una ficha editada por Make no vuelve a entrar por la misma ruta. Costo máximo del retrigger: 2 operaciones.</div>
   <div class="box"><b class="t">Comparación de tipos correctos</b>Estado se compara como texto, Aprobado y Notificado como booleanos, la existencia de datos con <code>exist / notexist</code>, y la experiencia es numérica en Notion para que la IA la compare con la mínima. No se comparan números como texto.</div>
-  <div class="box"><b class="t">Límites de consumo</b>Trigger cada 15 min con límite de 10 fichas por ciclo (backpressure), <code>max_tokens = 700</code>, RAG con máximo 10 entradas, plan Free de Make con 1.000 ops/mes.</div>
+  <div class="box"><b class="t">Límites de consumo</b>Trigger cada 60 min con límite de 10 fichas por ciclo (backpressure), <code>max_tokens = 2000</code>, RAG con máximo 10 entradas, plan Free de Make con 1.000 ops/mes.</div>
   <div class="box"><b class="t">Cuotas externas</b>Groq (rate limit por minuto) y Gmail (500 envíos/día) se absorben con los reintentos de Break; Notion 429 con el límite de 10 ítems por ciclo.</div>
 </div>
 

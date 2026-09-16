@@ -51,15 +51,15 @@
   <div class="layer notion"><b>1 · Memoria — Notion (4 bases relacionadas)</b>
     DB1 <b style="display:inline">Candidatos</b> (pipeline, resultados IA, Aprobado ✓, Thread ID) · DB2 <b style="display:inline">Búsquedas</b> (requisitos, reclutador) · DB3 <b style="display:inline">Base de conocimiento</b> (RAG) · DB4 <b style="display:inline">Registro de ejecuciones</b> (tasa de errores) · <b style="display:inline">Dashboard</b> público.</div>
   <div class="layer make"><b>2 · Orquestador — Make</b>
-    Trigger <i>Watch Database Items</i> (editados, 15 min, límite 10) → Router de 4 rutas por estado · módulos nombrados, variables dinámicas, filtros anti-bucle · handlers <i>Break</i> (3 × 15 min) e <i>Ignore</i> · ejecuciones incompletas.</div>
+    Trigger <i>Watch Database Items</i> (editados, 60 min, límite 10) → Router de 4 rutas por estado · módulos nombrados, variables dinámicas, filtros anti-bucle · handlers <i>Break</i> (3 × 15 min) e <i>Ignore</i> · ejecuciones incompletas.</div>
   <div class="layer ia"><b>3 · Inteligencia — Groq API</b>
-    <i>openai/gpt-oss-120b</i> (GPT open-weight de OpenAI) · prompt de sistema + contexto RAG de DB3 · salida JSON forzada · <i>max_tokens</i> 700 · temperatura 0,2 · validación con la estructura "Salida clasificador IA".</div>
+    <i>openai/gpt-oss-120b</i> (GPT open-weight de OpenAI) · prompt de sistema + contexto RAG de DB3 · salida JSON forzada · <i>max_tokens</i> 2.000 · temperatura 0,2 · validación con la estructura "Salida clasificador IA".</div>
   <div class="layer gmail"><b>4 · Canal de salida — Gmail</b>
     Aviso HITL al reclutador con Message-ID propio · email al candidato solo tras aprobación · respuesta al reclutador <b>en el mismo hilo</b> (In-Reply-To / References, Thread ID en Notion) · aviso de datos incompletos.</div>
 </div>
 
 <div class="row">
-  <div class="lbl" style="background:#111827">Disparador<br><small>cada 15 min</small></div>
+  <div class="lbl" style="background:#111827">Disparador<br><small>cada 60 min</small></div>
   <div class="chain">
     <div class="box notion"><b>Notion · DB1 Candidatos</b>el reclutador carga/edita una ficha</div><span class="arrow">→</span>
     <div class="box make"><b>1 · Watch Database Items</b>ítems editados · límite 10 · sin datos fijos</div><span class="arrow">→</span>
@@ -74,7 +74,7 @@
     <div class="filter">Estado = Pendiente ∧ Resumen ∧ Correo ∧ Búsqueda existen</div><span class="arrow">→</span>
     <div class="box notion"><b>3 · Search Objects (DB3)</b>RAG: Tema = Puesto ∨ "General"</div><span class="arrow">→</span>
     <div class="box make"><b>4 · Text Aggregator</b>arma el contexto</div><span class="arrow">→</span>
-    <div class="box ia"><b>5 · Groq · gpt-oss-120b</b>system + user prompt · JSON · max_tokens 700</div><span class="arrow">→</span>
+    <div class="box ia"><b>5 · Groq · gpt-oss-120b</b>system + user prompt · JSON · max_tokens 2.000</div><span class="arrow">→</span>
     <div class="box make"><b>6 · Parse JSON</b>clasificación · puntaje · justificación · faltantes · borrador</div><span class="arrow">→</span>
     <div class="box gmail"><b>7 · Gmail → reclutador (HITL)</b>resultado + borrador + link a la ficha</div><span class="arrow">→</span>
     <div class="box notion"><b>8 · Update DB1</b>IA + Estado "En revisión" + Thread ID</div><span class="arrow">→</span>

@@ -149,14 +149,14 @@
 }</pre>
 
 <h3>5.4 Llamada a la IA — Make → Groq API (<i>Create a Chat Completion</i>)</h3>
-<p>Prompt de sistema con el contrato de salida; prompt de usuario con la búsqueda, el candidato y el contexto RAG. Salida forzada a JSON y <b>máximo 700 tokens</b>.</p>
+<p>Prompt de sistema con el contrato de salida; prompt de usuario con la búsqueda, el candidato y el contexto RAG. Salida forzada a JSON y <b>máximo 2.000 tokens</b>.</p>
 <pre>{
   "model": "openai/gpt-oss-120b",
   "messages": [
     { "role": "system", "content": "Sos un analista senior de selección de personal… Respondé ÚNICAMENTE con un objeto JSON válido…" },
     { "role": "user", "content": "## Búsqueda\nPuesto: Desarrollador Backend Node.js\nRequisitos: …\n## Candidato\nNombre: Lucía Fernández\n…\n## Base de conocimiento de la empresa\n### Criterios · General\n…" }
   ],
-  "max_tokens": 700,
+  "max_tokens": 2000,
   "temperature": 0.2,
   "response_format": { "type": "json_object" }
 }</pre>
@@ -224,7 +224,7 @@
 <h2>6. Operación diaria</h2>
 <div class="grid2">
   <div class="box"><b class="t">Abrir una búsqueda</b>En DB2 crear la fila con Puesto, Requisitos, Experiencia mínima, Skills clave y el email del Reclutador. Si el puesto tiene criterios propios, agregar en DB3 entradas con Tema = nombre exacto del puesto.</div>
-  <div class="box"><b class="t">Cargar un candidato</b>En DB1: Nombre, Apellido, Cargo, Experiencia (número), Correo, Búsqueda (relación) y Resumen del CV. Estado = Pendiente. En menos de 15 minutos la ficha pasa a "En revisión" y llega el email de revisión.</div>
+  <div class="box"><b class="t">Cargar un candidato</b>En DB1: Nombre, Apellido, Cargo, Experiencia (número), Correo, Búsqueda (relación) y Resumen del CV. Estado = Pendiente. En menos de 60 minutos la ficha pasa a "En revisión" y llega el email de revisión.</div>
   <div class="box"><b class="t">Aprobar o rechazar</b>Leer el email, abrir la ficha, editar el Borrador de respuesta si hace falta y marcar <b>Aprobado ✓</b> (envía la invitación) o poner <b>Estado = Rechazado</b> (envía el cierre). El sistema nunca escribe al candidato sin ese clic.</div>
   <div class="box"><b class="t">Si una ficha queda en Error</b>Leer el campo Error (qué falta o qué API falló). Corregir y volver a poner Estado = Pendiente. Los errores de API se reintentan solos 3 veces cada 15 minutos antes de necesitar intervención.</div>
 </div>
