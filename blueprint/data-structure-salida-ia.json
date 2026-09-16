@@ -1,0 +1,18 @@
+{
+  "name": "Salida clasificador IA",
+  "strict": false,
+  "spec": [
+    { "name": "clasificacion", "label": "Clasificación (Apto / No apto / Revisar)", "type": "text", "required": true },
+    { "name": "puntaje", "label": "Puntaje 0-100", "type": "number", "required": true },
+    { "name": "justificacion", "label": "Justificación (≤ 400 caracteres)", "type": "text", "required": true },
+    { "name": "faltantes", "label": "Requisitos faltantes", "type": "text", "required": false },
+    { "name": "borrador_respuesta", "label": "Borrador de respuesta al candidato", "type": "text", "required": true }
+  ],
+  "sample": {
+    "clasificacion": "Apto",
+    "puntaje": 82,
+    "justificacion": "5 años con Node.js y PostgreSQL, APIs REST en producción; no menciona AWS.",
+    "faltantes": "AWS",
+    "borrador_respuesta": "Hola Lucía, gracias por postularte. Nos gustaría conocerte en una entrevista técnica de 45 minutos esta semana. ¿Qué día te queda cómodo? Saludos, Equipo de Selección"
+  }
+}
