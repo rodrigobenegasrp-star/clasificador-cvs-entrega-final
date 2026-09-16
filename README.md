@@ -12,10 +12,10 @@ Ecosistema de automatización para un equipo de selección de personal. Un reclu
 | 2 | Manual operativo de datos (esquemas de tablas + JSON de transferencia) | [docs/02-manual-operativo-datos.pdf](docs/02-manual-operativo-datos.pdf) |
 | 3 | Matriz de costos por tarea | [docs/03-matriz-costos.pdf](docs/03-matriz-costos.pdf) |
 | 4 | Seguridad y resiliencia | [docs/04-seguridad-resiliencia.pdf](docs/04-seguridad-resiliencia.pdf) |
-| 5 | Dashboard de control (vista pública de Notion) | **PENDIENTE: link público** |
+| 5 | Dashboard de control (vista pública de Notion) | [Dashboard · Clasificador de CVs](https://www.notion.so/0621b22f2acb48f3ba502776ad67fe61) |
 | · | Blueprint del flujo (exportado de Make) | [blueprint/clasificador-cvs.blueprint.json](blueprint/clasificador-cvs.blueprint.json) |
 | · | Estructura de datos "Salida clasificador IA" | [blueprint/data-structure-salida-ia.json](blueprint/data-structure-salida-ia.json) |
-| · | Bases de Notion (solo lectura) | **PENDIENTE: link** |
+| · | Bases de Notion (solo lectura) | [DB1 Candidatos](https://www.notion.so/3b4151a7f4b6806ca98bd99d2bdb8fda) · [DB2 Búsquedas](https://www.notion.so/eb4e0cc854c94913a1a5c155bcd6ec23) · [DB3 Base de conocimiento](https://www.notion.so/d819394f886e47a296f4608089e706f3) · [DB4 Registro de ejecuciones](https://www.notion.so/22c4f43e57054e61973fce1683f32c5a) |
 | · | Capturas de evidencia | [screenshots/](screenshots/) |
 | · | Video demo (3 min) | **PENDIENTE: link** |
 
