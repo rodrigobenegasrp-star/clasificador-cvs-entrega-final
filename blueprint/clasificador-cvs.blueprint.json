@@ -1,48 +1,34 @@
 {
-  "name": "Entrega Final - Clasificador de CVs",
   "flow": [
     {
       "id": 1,
+      "mapper": {},
       "module": "notion:watchDatabaseItems",
       "version": 1,
-      "parameters": {
-        "limit": 10,
-        "select": "update",
-        "watchBy": "database",
-        "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
-        "__IMTCONN__": 10767715
-      },
-      "mapper": {},
       "metadata": {
         "designer": {
           "x": 0,
           "y": 0,
           "name": "Notion · Watch candidatos editados (DB1)"
         }
+      },
+      "parameters": {
+        "limit": 10,
+        "select": "update",
+        "watchBy": "data_source",
+        "__IMTCONN__": 10767715,
+        "data_source": "3b4151a7-f4b6-80a5-a4e1-000b3d4a525a"
       }
     },
     {
       "id": 2,
-      "module": "builtin:BasicRouter",
-      "version": 1,
       "mapper": null,
-      "metadata": {
-        "designer": {
-          "x": 300,
-          "y": 0,
-          "name": "Router por Estado"
-        }
-      },
+      "module": "builtin:BasicRouter",
       "routes": [
         {
           "flow": [
             {
               "id": 3,
-              "module": "notion:searchObjects1",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "filter": {
                 "name": "A · Pendiente + datos completos",
                 "conditions": [
@@ -68,8 +54,6 @@
                 ]
               },
               "mapper": {
-                "select": "item",
-                "database": "d819394f-886e-47a2-96f4-608089e706f3",
                 "limit": "10",
                 "filter": [
                   [
@@ -86,42 +70,44 @@
                       "o": "text:equals"
                     }
                   ]
-                ]
+                ],
+                "select": "item",
+                "database": "d819394f-886e-47a2-96f4-608089e706f3"
               },
+              "module": "notion:searchObjects1",
+              "version": 1,
               "metadata": {
                 "designer": {
-                  "x": 600,
-                  "y": -450,
+                  "x": 526,
+                  "y": -672,
                   "name": "RAG · Buscar contexto en DB3"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 4,
-              "module": "util:TextAggregator",
-              "version": 1,
-              "parameters": {
-                "rowSeparator": "\n",
-                "feeder": 3
-              },
               "mapper": {
                 "value": "### {{3.properties_value.Tipo.name}} · {{join(map(3.properties_value.Tema; \"plain_text\"); \"\")}}\n{{join(map(3.properties_value.Contenido; \"plain_text\"); \"\")}}"
               },
+              "module": "util:TextAggregator",
+              "version": 1,
               "metadata": {
                 "designer": {
-                  "x": 900,
-                  "y": -450,
+                  "x": 858,
+                  "y": -679,
                   "name": "Agregar contexto RAG"
                 }
+              },
+              "parameters": {
+                "feeder": 3,
+                "rowSeparator": "\n"
               }
             },
             {
               "id": 5,
-              "module": "groq:chatCompletion",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10766511
-              },
               "mapper": {
                 "model": "openai/gpt-oss-120b",
                 "messages": [
@@ -134,199 +120,853 @@
                     "content": "## Búsqueda\nPuesto: {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}}\nRequisitos: {{join(map(1.properties_value.Requisitos.array[1].rich_text; \"plain_text\"); \"\")}}\nSkills clave: {{join(map(1.properties_value.`Skills clave`.array[1].rich_text; \"plain_text\"); \"\")}}\nExperiencia mínima (años): {{1.properties_value.`Exp. mínima`.number}}\n\n## Candidato\nNombre: {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}\nCargo actual: {{join(map(1.properties_value.Cargo; \"plain_text\"); \"\")}}\nExperiencia (años): {{1.properties_value.`Experiencia (años)`}}\nResumen del CV:\n{{join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\")}}\n\n## Base de conocimiento de la empresa (contexto recuperado)\n{{4.text}}"
                   }
                 ],
-                "max_tokens": "700",
-                "temperature": "0.2",
+                "max_tokens": 2000,
+                "temperature": 0.2,
                 "response_format": "json_object"
               },
-              "metadata": {
-                "designer": {
-                  "x": 1200,
-                  "y": -450,
-                  "name": "IA · Clasificar CV (Groq gpt-oss-120b)"
-                }
-              },
+              "module": "groq:chatCompletion",
               "onerror": [
                 {
                   "id": 50,
-                  "module": "notion:createAPage",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
-                    "select": "list",
-                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                     "fields": {
-                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                       "Cand": [
                         "{{1.id}}"
                       ],
-                      "Etap": "Clasificación IA",
-                      "Resu": "Error",
-                      "ErrC": true,
                       "Deta": "Falló la API de IA: {{5.error.message}}",
+                      "ErrC": true,
+                      "Etap": "Clasificación IA",
                       "Mode": "openai/gpt-oss-120b",
-                      "Toke": ""
-                    }
+                      "Resu": "Error",
+                      "Toke": "",
+                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                    },
+                    "select": "list",
+                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
                   },
+                  "module": "notion:createAPage",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Cand",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Candidato",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Deta",
+                            "type": "text",
+                            "label": "Detalle",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "ErrC",
+                            "type": "boolean",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Etap",
+                            "type": "select",
+                            "label": "Etapa",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Mode",
+                            "type": "text",
+                            "label": "Modelo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Resu",
+                            "type": "select",
+                            "label": "Resultado",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Toke",
+                            "type": "number",
+                            "label": "Tokens",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Ejecución",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1350,
-                      "y": -270,
+                      "x": 1131,
+                      "y": -345,
                       "name": "Log error IA → DB4"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 51,
-                  "module": "notion:updateADatabaseItem",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
                     "page": "{{1.id}}",
                     "fields": {
-                      "m%3D%3Eh": "Error",
                       "Errr": "IA: {{5.error.message}} (reintento automático en 15 min, hasta 3 veces)",
-                      "UltE": "{{now}}"
+                      "UltE": {
+                        "start": "{{now}}",
+                        "includeTime": true
+                      },
+                      "m%3D%3Eh": "Error"
                     },
                     "select": "list",
                     "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                     "updateBy": "database"
                   },
+                  "module": "notion:updateADatabaseItem",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "updateBy",
+                        "type": "select",
+                        "label": "Update By",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "data_source",
+                            "database"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "mode": "edit",
+                        "name": "page",
+                        "type": "select",
+                        "label": "Database Item ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Aprb",
+                            "type": "boolean",
+                            "label": "Aprobado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Borr",
+                            "type": "text",
+                            "label": "Borrador de respuesta",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Busq",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Búsqueda",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "ClIA",
+                            "type": "select",
+                            "label": "Clasificación IA",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Ejec",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Ejecuciones",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Errr",
+                            "type": "text",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Falt",
+                            "type": "text",
+                            "label": "Requisitos faltantes",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Hilo",
+                            "type": "text",
+                            "label": "Hilo Gmail",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "JsIA",
+                            "type": "text",
+                            "label": "Justificación IA",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "LUHn",
+                            "type": "text",
+                            "label": "Cargo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Ntfc",
+                            "type": "boolean",
+                            "label": "Notificado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "PtIA",
+                            "type": "number",
+                            "label": "Puntaje IA",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "ResC",
+                            "type": "text",
+                            "label": "Resumen del CV",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "SjjX",
+                            "type": "number",
+                            "label": "Experiencia (años)",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "UltE",
+                            "spec": [
+                              {
+                                "name": "start",
+                                "type": "date",
+                                "label": "Start Time"
+                              },
+                              {
+                                "name": "end",
+                                "type": "date",
+                                "label": "End Time"
+                              },
+                              {
+                                "name": "includeTime",
+                                "type": "select",
+                                "label": "Include Time",
+                                "validate": {
+                                  "enum": [
+                                    true,
+                                    false
+                                  ]
+                                }
+                              }
+                            ],
+                            "type": "collection",
+                            "label": "Última ejecución"
+                          },
+                          {
+                            "name": "ZfS%3F",
+                            "type": "email",
+                            "label": "Correo electrónico",
+                            "metadata": {
+                              "type": "email"
+                            }
+                          },
+                          {
+                            "name": "fpLs",
+                            "type": "text",
+                            "label": "Apellido",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "m%3D%3Eh",
+                            "type": "select",
+                            "label": "Estado",
+                            "metadata": {
+                              "type": "status"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Nombre",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1650,
-                      "y": -270,
+                      "x": 1472,
+                      "y": -348,
                       "name": "DB1 → Estado Error (IA)"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 52,
-                  "module": "builtin:Break",
-                  "version": 1,
-                  "parameters": {},
                   "mapper": {
                     "count": "3",
                     "retry": "{{true}}",
                     "interval": "15"
                   },
+                  "module": "builtin:Break",
+                  "version": 1,
                   "metadata": {
                     "designer": {
-                      "x": 1950,
-                      "y": -270,
+                      "x": 1828,
+                      "y": -323,
                       "name": "Break · 3 reintentos"
                     }
-                  }
+                  },
+                  "parameters": {}
                 }
-              ]
+              ],
+              "version": 1,
+              "metadata": {
+                "designer": {
+                  "x": 1185,
+                  "y": -674,
+                  "name": "IA · Clasificar CV (Groq gpt-oss-120b)"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10766511
+              }
             },
             {
               "id": 6,
-              "module": "json:ParseJSON",
-              "version": 1,
-              "parameters": {
-                "type": 498974
-              },
               "mapper": {
-                "json": "{{5.choices[1].message.content}}"
+                "json": "{{replace(5.choices[1].message.content; \"/```(json)?/g\"; \"\")}}"
               },
-              "metadata": {
-                "designer": {
-                  "x": 1500,
-                  "y": -450,
-                  "name": "Parse JSON de la salida IA"
-                }
-              },
+              "module": "json:ParseJSON",
               "onerror": [
                 {
                   "id": 60,
-                  "module": "notion:createAPage",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
-                    "select": "list",
-                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                     "fields": {
-                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                       "Cand": [
                         "{{1.id}}"
                       ],
-                      "Etap": "Clasificación IA",
-                      "Resu": "Error",
-                      "ErrC": true,
                       "Deta": "La IA no devolvió el JSON esperado: {{6.error.message}}",
+                      "ErrC": true,
+                      "Etap": "Clasificación IA",
                       "Mode": "openai/gpt-oss-120b",
-                      "Toke": ""
-                    }
+                      "Resu": "Error",
+                      "Toke": "",
+                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                    },
+                    "select": "list",
+                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
                   },
+                  "module": "notion:createAPage",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Cand",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Candidato",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Deta",
+                            "type": "text",
+                            "label": "Detalle",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "ErrC",
+                            "type": "boolean",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Etap",
+                            "type": "select",
+                            "label": "Etapa",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Mode",
+                            "type": "text",
+                            "label": "Modelo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Resu",
+                            "type": "select",
+                            "label": "Resultado",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Toke",
+                            "type": "number",
+                            "label": "Tokens",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Ejecución",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1650,
-                      "y": -120,
+                      "x": 1810,
+                      "y": -950,
                       "name": "Log error JSON → DB4"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 61,
-                  "module": "notion:updateADatabaseItem",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
                     "page": "{{1.id}}",
                     "fields": {
-                      "m%3D%3Eh": "Error",
                       "Errr": "Respuesta de la IA inválida: {{6.error.message}}. Volvé a poner Pendiente para reintentar.",
-                      "UltE": "{{now}}"
+                      "UltE": {
+                        "start": "{{now}}",
+                        "includeTime": true
+                      },
+                      "m%3D%3Eh": "Error"
                     },
                     "select": "list",
                     "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                     "updateBy": "database"
                   },
+                  "module": "notion:updateADatabaseItem",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "updateBy",
+                        "type": "select",
+                        "label": "Update By",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "data_source",
+                            "database"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "mode": "edit",
+                        "name": "page",
+                        "type": "select",
+                        "label": "Database Item ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Aprb",
+                            "type": "boolean",
+                            "label": "Aprobado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Borr",
+                            "type": "text",
+                            "label": "Borrador de respuesta",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Busq",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Búsqueda",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "ClIA",
+                            "type": "select",
+                            "label": "Clasificación IA",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Ejec",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Ejecuciones",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Errr",
+                            "type": "text",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Falt",
+                            "type": "text",
+                            "label": "Requisitos faltantes",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Hilo",
+                            "type": "text",
+                            "label": "Hilo Gmail",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "JsIA",
+                            "type": "text",
+                            "label": "Justificación IA",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "LUHn",
+                            "type": "text",
+                            "label": "Cargo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Ntfc",
+                            "type": "boolean",
+                            "label": "Notificado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "PtIA",
+                            "type": "number",
+                            "label": "Puntaje IA",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "ResC",
+                            "type": "text",
+                            "label": "Resumen del CV",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "SjjX",
+                            "type": "number",
+                            "label": "Experiencia (años)",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "UltE",
+                            "spec": [
+                              {
+                                "name": "start",
+                                "type": "date",
+                                "label": "Start Time"
+                              },
+                              {
+                                "name": "end",
+                                "type": "date",
+                                "label": "End Time"
+                              },
+                              {
+                                "name": "includeTime",
+                                "type": "select",
+                                "label": "Include Time",
+                                "validate": {
+                                  "enum": [
+                                    true,
+                                    false
+                                  ]
+                                }
+                              }
+                            ],
+                            "type": "collection",
+                            "label": "Última ejecución"
+                          },
+                          {
+                            "name": "ZfS%3F",
+                            "type": "email",
+                            "label": "Correo electrónico",
+                            "metadata": {
+                              "type": "email"
+                            }
+                          },
+                          {
+                            "name": "fpLs",
+                            "type": "text",
+                            "label": "Apellido",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "m%3D%3Eh",
+                            "type": "select",
+                            "label": "Estado",
+                            "metadata": {
+                              "type": "status"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Nombre",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1950,
-                      "y": -120,
+                      "x": 2269,
+                      "y": -968,
                       "name": "DB1 → Estado Error (JSON)"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 62,
+                  "mapper": {},
                   "module": "builtin:Ignore",
                   "version": 1,
-                  "parameters": {},
-                  "mapper": {},
                   "metadata": {
                     "designer": {
-                      "x": 2250,
-                      "y": -120,
+                      "x": 2747,
+                      "y": -959,
                       "name": "Ignore · continuar"
                     }
-                  }
+                  },
+                  "parameters": {}
                 }
-              ]
+              ],
+              "version": 1,
+              "metadata": {
+                "designer": {
+                  "x": 1525,
+                  "y": -672,
+                  "name": "Parse JSON de la salida IA"
+                }
+              },
+              "parameters": {
+                "type": 498974
+              }
             },
             {
               "id": 7,
-              "module": "google-email:sendAnEmail",
-              "version": 4,
-              "parameters": {
-                "__IMTCONN__": 10185958
-              },
               "mapper": {
                 "to": [
                   "{{ifempty(1.properties_value.Reclutador.array[1].email; 1.properties_value.Reclutador.array[1])}}"
                 ],
-                "subject": "[Revisión IA] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · {{6.clasificacion}} ({{6.puntaje}}/100)",
                 "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><h2 style=\"margin:0 0 8px\">Revisión de candidato: {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}</h2>\n<p><b>Búsqueda:</b> {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} &nbsp;·&nbsp; <b>Cargo actual:</b> {{join(map(1.properties_value.Cargo; \"plain_text\"); \"\")}} &nbsp;·&nbsp; <b>Experiencia:</b> {{1.properties_value.`Experiencia (años)`}} años (mínimo {{1.properties_value.`Exp. mínima`.number}})</p>\n<p style=\"font-size:16px\"><b>Clasificación IA:</b> {{6.clasificacion}} &nbsp;·&nbsp; <b>Puntaje:</b> {{6.puntaje}}/100</p>\n<p><b>Justificación:</b> {{6.justificacion}}</p>\n<p><b>Requisitos faltantes:</b> {{6.faltantes}}</p>\n<h3 style=\"margin:16px 0 4px\">Borrador de respuesta al candidato (editable en Notion)</h3>\n<blockquote style=\"border-left:3px solid #ccc;margin:0;padding:4px 12px;color:#444\">{{replace(6.borrador_respuesta; newline; \"<br>\")}}</blockquote>\n<p style=\"margin-top:16px\">👉 <a href=\"{{1.url}}\">Abrir la ficha en Notion</a><br>Para enviar la invitación marcá <b>Aprobado ✓</b>. Para descartar, cambiá <b>Estado → Rechazado</b>. Nada se envía al candidato sin tu aprobación.</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
+                "subject": "[Revisión IA] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · {{6.clasificacion}} ({{6.puntaje}}/100)",
                 "bodyType": "rawHtml",
                 "emailHeaders": [
                   {
@@ -335,152 +975,811 @@
                   }
                 ]
               },
-              "metadata": {
-                "designer": {
-                  "x": 1800,
-                  "y": -450,
-                  "name": "HITL · Email al reclutador (Message-ID)"
-                }
-              },
+              "module": "google-email:sendAnEmail",
               "onerror": [
                 {
                   "id": 70,
-                  "module": "notion:createAPage",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
-                    "select": "list",
-                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                     "fields": {
-                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Notificación HITL · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                       "Cand": [
                         "{{1.id}}"
                       ],
-                      "Etap": "Notificación HITL",
-                      "Resu": "Error",
-                      "ErrC": true,
                       "Deta": "Falló Gmail: {{7.error.message}}",
+                      "ErrC": true,
+                      "Etap": "Notificación HITL",
                       "Mode": "",
-                      "Toke": ""
-                    }
+                      "Resu": "Error",
+                      "Toke": "",
+                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Notificación HITL · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                    },
+                    "select": "list",
+                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
                   },
+                  "module": "notion:createAPage",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Cand",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Candidato",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Deta",
+                            "type": "text",
+                            "label": "Detalle",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "ErrC",
+                            "type": "boolean",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Etap",
+                            "type": "select",
+                            "label": "Etapa",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Mode",
+                            "type": "text",
+                            "label": "Modelo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Resu",
+                            "type": "select",
+                            "label": "Resultado",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Toke",
+                            "type": "number",
+                            "label": "Tokens",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Ejecución",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1950,
-                      "y": -270,
+                      "x": 2337,
+                      "y": -322,
                       "name": "Log error Gmail → DB4"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 71,
-                  "module": "notion:updateADatabaseItem",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
                     "page": "{{1.id}}",
                     "fields": {
-                      "m%3D%3Eh": "Error",
                       "Errr": "Gmail: {{7.error.message}}",
-                      "UltE": "{{now}}"
+                      "UltE": {
+                        "start": "{{now}}",
+                        "includeTime": true
+                      },
+                      "m%3D%3Eh": "Error"
                     },
                     "select": "list",
                     "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                     "updateBy": "database"
                   },
+                  "module": "notion:updateADatabaseItem",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "updateBy",
+                        "type": "select",
+                        "label": "Update By",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "data_source",
+                            "database"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "mode": "edit",
+                        "name": "page",
+                        "type": "select",
+                        "label": "Database Item ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Aprb",
+                            "type": "boolean",
+                            "label": "Aprobado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Borr",
+                            "type": "text",
+                            "label": "Borrador de respuesta",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Busq",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Búsqueda",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "ClIA",
+                            "type": "select",
+                            "label": "Clasificación IA",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Ejec",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Ejecuciones",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Errr",
+                            "type": "text",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Falt",
+                            "type": "text",
+                            "label": "Requisitos faltantes",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Hilo",
+                            "type": "text",
+                            "label": "Hilo Gmail",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "JsIA",
+                            "type": "text",
+                            "label": "Justificación IA",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "LUHn",
+                            "type": "text",
+                            "label": "Cargo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Ntfc",
+                            "type": "boolean",
+                            "label": "Notificado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "PtIA",
+                            "type": "number",
+                            "label": "Puntaje IA",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "ResC",
+                            "type": "text",
+                            "label": "Resumen del CV",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "SjjX",
+                            "type": "number",
+                            "label": "Experiencia (años)",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "UltE",
+                            "spec": [
+                              {
+                                "name": "start",
+                                "type": "date",
+                                "label": "Start Time"
+                              },
+                              {
+                                "name": "end",
+                                "type": "date",
+                                "label": "End Time"
+                              },
+                              {
+                                "name": "includeTime",
+                                "type": "select",
+                                "label": "Include Time",
+                                "validate": {
+                                  "enum": [
+                                    true,
+                                    false
+                                  ]
+                                }
+                              }
+                            ],
+                            "type": "collection",
+                            "label": "Última ejecución"
+                          },
+                          {
+                            "name": "ZfS%3F",
+                            "type": "email",
+                            "label": "Correo electrónico",
+                            "metadata": {
+                              "type": "email"
+                            }
+                          },
+                          {
+                            "name": "fpLs",
+                            "type": "text",
+                            "label": "Apellido",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "m%3D%3Eh",
+                            "type": "select",
+                            "label": "Estado",
+                            "metadata": {
+                              "type": "status"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Nombre",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 2250,
-                      "y": -270,
+                      "x": 2757,
+                      "y": -317,
                       "name": "DB1 → Estado Error (Gmail)"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 72,
-                  "module": "builtin:Break",
-                  "version": 1,
-                  "parameters": {},
                   "mapper": {
                     "count": "3",
                     "retry": "{{true}}",
                     "interval": "15"
                   },
+                  "module": "builtin:Break",
+                  "version": 1,
                   "metadata": {
                     "designer": {
-                      "x": 2550,
-                      "y": -270,
+                      "x": 3134,
+                      "y": -333,
                       "name": "Break · 3 reintentos"
                     }
-                  }
+                  },
+                  "parameters": {}
                 }
-              ]
+              ],
+              "version": 4,
+              "metadata": {
+                "designer": {
+                  "x": 1881,
+                  "y": -677,
+                  "name": "HITL · Email al reclutador (Message-ID)"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10185958
+              }
             },
             {
               "id": 8,
-              "module": "notion:updateADatabaseItem",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
                 "page": "{{1.id}}",
                 "fields": {
-                  "ClIA": "{{6.clasificacion}}",
-                  "PtIA": "{{6.puntaje}}",
-                  "JsIA": "{{6.justificacion}}",
-                  "Falt": "{{6.faltantes}}",
                   "Borr": "{{6.borrador_respuesta}}",
-                  "m%3D%3Eh": "En revisión",
+                  "ClIA": "{{6.clasificacion}}",
+                  "Errr": "",
+                  "Falt": "{{6.faltantes}}",
                   "Hilo": "{{7.threadId}}",
-                  "UltE": "{{now}}",
-                  "Errr": ""
+                  "JsIA": "{{6.justificacion}}",
+                  "PtIA": "{{6.puntaje}}",
+                  "UltE": {
+                    "start": "{{now}}",
+                    "includeTime": true
+                  },
+                  "m%3D%3Eh": "En revisión"
                 },
                 "select": "list",
                 "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                 "updateBy": "database"
               },
+              "module": "notion:updateADatabaseItem",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "updateBy",
+                    "type": "select",
+                    "label": "Update By",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "data_source",
+                        "database"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "mode": "edit",
+                    "name": "page",
+                    "type": "select",
+                    "label": "Database Item ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Aprb",
+                        "type": "boolean",
+                        "label": "Aprobado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Borr",
+                        "type": "text",
+                        "label": "Borrador de respuesta",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Busq",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Búsqueda",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "ClIA",
+                        "type": "select",
+                        "label": "Clasificación IA",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Ejec",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Ejecuciones",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Errr",
+                        "type": "text",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Falt",
+                        "type": "text",
+                        "label": "Requisitos faltantes",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Hilo",
+                        "type": "text",
+                        "label": "Hilo Gmail",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "JsIA",
+                        "type": "text",
+                        "label": "Justificación IA",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "LUHn",
+                        "type": "text",
+                        "label": "Cargo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Ntfc",
+                        "type": "boolean",
+                        "label": "Notificado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "PtIA",
+                        "type": "number",
+                        "label": "Puntaje IA",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "ResC",
+                        "type": "text",
+                        "label": "Resumen del CV",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "SjjX",
+                        "type": "number",
+                        "label": "Experiencia (años)",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "UltE",
+                        "spec": [
+                          {
+                            "name": "start",
+                            "type": "date",
+                            "label": "Start Time"
+                          },
+                          {
+                            "name": "end",
+                            "type": "date",
+                            "label": "End Time"
+                          },
+                          {
+                            "name": "includeTime",
+                            "type": "select",
+                            "label": "Include Time",
+                            "validate": {
+                              "enum": [
+                                true,
+                                false
+                              ]
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Última ejecución"
+                      },
+                      {
+                        "name": "ZfS%3F",
+                        "type": "email",
+                        "label": "Correo electrónico",
+                        "metadata": {
+                          "type": "email"
+                        }
+                      },
+                      {
+                        "name": "fpLs",
+                        "type": "text",
+                        "label": "Apellido",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "m%3D%3Eh",
+                        "type": "select",
+                        "label": "Estado",
+                        "metadata": {
+                          "type": "status"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Nombre",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 2100,
-                  "y": -450,
+                  "x": 2277,
+                  "y": -680,
                   "name": "DB1 → En revisión + Thread ID"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 9,
-              "module": "notion:createAPage",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
-                "select": "list",
-                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                 "fields": {
-                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                   "Cand": [
                     "{{1.id}}"
                   ],
-                  "Etap": "Clasificación IA",
-                  "Resu": "OK",
-                  "ErrC": false,
                   "Deta": "{{6.clasificacion}} ({{6.puntaje}}/100) · aviso al reclutador enviado, hilo {{7.threadId}}",
+                  "ErrC": false,
+                  "Etap": "Clasificación IA",
                   "Mode": "openai/gpt-oss-120b",
-                  "Toke": "{{5.usage.total_tokens}}"
-                }
+                  "Resu": "OK",
+                  "Toke": "{{5.usage.total_tokens}}",
+                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Clasificación IA · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                },
+                "select": "list",
+                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
               },
+              "module": "notion:createAPage",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Cand",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Candidato",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Deta",
+                        "type": "text",
+                        "label": "Detalle",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "ErrC",
+                        "type": "boolean",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Etap",
+                        "type": "select",
+                        "label": "Etapa",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Mode",
+                        "type": "text",
+                        "label": "Modelo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Resu",
+                        "type": "select",
+                        "label": "Resultado",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Toke",
+                        "type": "number",
+                        "label": "Tokens",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Ejecución",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 2400,
-                  "y": -450,
+                  "x": 2689,
+                  "y": -687,
                   "name": "Log OK clasificación → DB4"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             }
           ]
@@ -489,26 +1788,6 @@
           "flow": [
             {
               "id": 10,
-              "module": "google-email:sendAnEmail",
-              "version": 4,
-              "parameters": {
-                "__IMTCONN__": 10185958
-              },
-              "mapper": {
-                "to": [
-                  "{{1.properties_value.`Correo electrónico`}}"
-                ],
-                "subject": "Tu postulación a {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · próximos pasos",
-                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>{{replace(join(map(1.properties_value.`Borrador de respuesta`; \"plain_text\"); \"\"); newline; \"<br>\")}}</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
-                "bodyType": "rawHtml"
-              },
-              "metadata": {
-                "designer": {
-                  "x": 600,
-                  "y": -150,
-                  "name": "Email al candidato (borrador aprobado)"
-                }
-              },
               "filter": {
                 "name": "B · Aprobado por el reclutador (HITL)",
                 "conditions": [
@@ -526,154 +1805,823 @@
                   ]
                 ]
               },
+              "mapper": {
+                "to": [
+                  "{{1.properties_value.`Correo electrónico`}}"
+                ],
+                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>{{replace(join(map(1.properties_value.`Borrador de respuesta`; \"plain_text\"); \"\"); newline; \"<br>\")}}</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
+                "subject": "Tu postulación a {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · próximos pasos",
+                "bodyType": "rawHtml"
+              },
+              "module": "google-email:sendAnEmail",
               "onerror": [
                 {
                   "id": 100,
-                  "module": "notion:createAPage",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
-                    "select": "list",
-                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                     "fields": {
-                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Envío al candidato · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                       "Cand": [
                         "{{1.id}}"
                       ],
-                      "Etap": "Envío al candidato",
-                      "Resu": "Error",
-                      "ErrC": true,
                       "Deta": "Falló Gmail: {{10.error.message}}",
+                      "ErrC": true,
+                      "Etap": "Envío al candidato",
                       "Mode": "",
-                      "Toke": ""
-                    }
+                      "Resu": "Error",
+                      "Toke": "",
+                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Envío al candidato · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                    },
+                    "select": "list",
+                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
                   },
+                  "module": "notion:createAPage",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Cand",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Candidato",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Deta",
+                            "type": "text",
+                            "label": "Detalle",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "ErrC",
+                            "type": "boolean",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Etap",
+                            "type": "select",
+                            "label": "Etapa",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Mode",
+                            "type": "text",
+                            "label": "Modelo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Resu",
+                            "type": "select",
+                            "label": "Resultado",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Toke",
+                            "type": "number",
+                            "label": "Tokens",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Ejecución",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 750,
-                      "y": 30,
+                      "x": 956,
+                      "y": 271,
                       "name": "Log error Gmail → DB4"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 101,
-                  "module": "notion:updateADatabaseItem",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
                     "page": "{{1.id}}",
                     "fields": {
-                      "m%3D%3Eh": "Error",
                       "Errr": "Gmail: {{10.error.message}}",
-                      "UltE": "{{now}}"
+                      "UltE": {
+                        "start": "{{now}}",
+                        "includeTime": true
+                      },
+                      "m%3D%3Eh": "Error"
                     },
                     "select": "list",
                     "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                     "updateBy": "database"
                   },
+                  "module": "notion:updateADatabaseItem",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "updateBy",
+                        "type": "select",
+                        "label": "Update By",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "data_source",
+                            "database"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "mode": "edit",
+                        "name": "page",
+                        "type": "select",
+                        "label": "Database Item ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Aprb",
+                            "type": "boolean",
+                            "label": "Aprobado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Borr",
+                            "type": "text",
+                            "label": "Borrador de respuesta",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Busq",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Búsqueda",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "ClIA",
+                            "type": "select",
+                            "label": "Clasificación IA",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Ejec",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Ejecuciones",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Errr",
+                            "type": "text",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Falt",
+                            "type": "text",
+                            "label": "Requisitos faltantes",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Hilo",
+                            "type": "text",
+                            "label": "Hilo Gmail",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "JsIA",
+                            "type": "text",
+                            "label": "Justificación IA",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "LUHn",
+                            "type": "text",
+                            "label": "Cargo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Ntfc",
+                            "type": "boolean",
+                            "label": "Notificado",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "PtIA",
+                            "type": "number",
+                            "label": "Puntaje IA",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "ResC",
+                            "type": "text",
+                            "label": "Resumen del CV",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "SjjX",
+                            "type": "number",
+                            "label": "Experiencia (años)",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "UltE",
+                            "spec": [
+                              {
+                                "name": "start",
+                                "type": "date",
+                                "label": "Start Time"
+                              },
+                              {
+                                "name": "end",
+                                "type": "date",
+                                "label": "End Time"
+                              },
+                              {
+                                "name": "includeTime",
+                                "type": "select",
+                                "label": "Include Time",
+                                "validate": {
+                                  "enum": [
+                                    true,
+                                    false
+                                  ]
+                                }
+                              }
+                            ],
+                            "type": "collection",
+                            "label": "Última ejecución"
+                          },
+                          {
+                            "name": "ZfS%3F",
+                            "type": "email",
+                            "label": "Correo electrónico",
+                            "metadata": {
+                              "type": "email"
+                            }
+                          },
+                          {
+                            "name": "fpLs",
+                            "type": "text",
+                            "label": "Apellido",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "m%3D%3Eh",
+                            "type": "select",
+                            "label": "Estado",
+                            "metadata": {
+                              "type": "status"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Nombre",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 1050,
-                      "y": 30,
+                      "x": 1394,
+                      "y": 258,
                       "name": "DB1 → Estado Error (Gmail)"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 102,
-                  "module": "builtin:Break",
-                  "version": 1,
-                  "parameters": {},
                   "mapper": {
                     "count": "3",
                     "retry": "{{true}}",
                     "interval": "15"
                   },
+                  "module": "builtin:Break",
+                  "version": 1,
                   "metadata": {
                     "designer": {
-                      "x": 1350,
-                      "y": 30,
+                      "x": 1956,
+                      "y": 261,
                       "name": "Break · 3 reintentos"
                     }
-                  }
+                  },
+                  "parameters": {}
                 }
-              ]
+              ],
+              "version": 4,
+              "metadata": {
+                "designer": {
+                  "x": 778,
+                  "y": -44,
+                  "name": "Email al candidato (borrador aprobado)"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10185958
+              }
             },
             {
               "id": 11,
-              "module": "notion:updateADatabaseItem",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
                 "page": "{{1.id}}",
                 "fields": {
-                  "m%3D%3Eh": "Contactado",
-                  "UltE": "{{now}}",
-                  "Errr": ""
+                  "Errr": "",
+                  "UltE": {
+                    "start": "{{now}}",
+                    "includeTime": true
+                  },
+                  "m%3D%3Eh": "Contactado"
                 },
                 "select": "list",
                 "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                 "updateBy": "database"
               },
+              "module": "notion:updateADatabaseItem",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "updateBy",
+                    "type": "select",
+                    "label": "Update By",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "data_source",
+                        "database"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "mode": "edit",
+                    "name": "page",
+                    "type": "select",
+                    "label": "Database Item ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Aprb",
+                        "type": "boolean",
+                        "label": "Aprobado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Borr",
+                        "type": "text",
+                        "label": "Borrador de respuesta",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Busq",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Búsqueda",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "ClIA",
+                        "type": "select",
+                        "label": "Clasificación IA",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Ejec",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Ejecuciones",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Errr",
+                        "type": "text",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Falt",
+                        "type": "text",
+                        "label": "Requisitos faltantes",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Hilo",
+                        "type": "text",
+                        "label": "Hilo Gmail",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "JsIA",
+                        "type": "text",
+                        "label": "Justificación IA",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "LUHn",
+                        "type": "text",
+                        "label": "Cargo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Ntfc",
+                        "type": "boolean",
+                        "label": "Notificado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "PtIA",
+                        "type": "number",
+                        "label": "Puntaje IA",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "ResC",
+                        "type": "text",
+                        "label": "Resumen del CV",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "SjjX",
+                        "type": "number",
+                        "label": "Experiencia (años)",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "UltE",
+                        "spec": [
+                          {
+                            "name": "start",
+                            "type": "date",
+                            "label": "Start Time"
+                          },
+                          {
+                            "name": "end",
+                            "type": "date",
+                            "label": "End Time"
+                          },
+                          {
+                            "name": "includeTime",
+                            "type": "select",
+                            "label": "Include Time",
+                            "validate": {
+                              "enum": [
+                                true,
+                                false
+                              ]
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Última ejecución"
+                      },
+                      {
+                        "name": "ZfS%3F",
+                        "type": "email",
+                        "label": "Correo electrónico",
+                        "metadata": {
+                          "type": "email"
+                        }
+                      },
+                      {
+                        "name": "fpLs",
+                        "type": "text",
+                        "label": "Apellido",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "m%3D%3Eh",
+                        "type": "select",
+                        "label": "Estado",
+                        "metadata": {
+                          "type": "status"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Nombre",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 900,
-                  "y": -150,
+                  "x": 1087,
+                  "y": -28,
                   "name": "DB1 → Contactado"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 12,
-              "module": "notion:createAPage",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
-                "select": "list",
-                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                 "fields": {
-                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Envío al candidato · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                   "Cand": [
                     "{{1.id}}"
                   ],
-                  "Etap": "Envío al candidato",
-                  "Resu": "OK",
-                  "ErrC": false,
                   "Deta": "Invitación enviada a {{1.properties_value.`Correo electrónico`}} · hilo {{10.threadId}}",
+                  "ErrC": false,
+                  "Etap": "Envío al candidato",
                   "Mode": "",
-                  "Toke": ""
-                }
+                  "Resu": "OK",
+                  "Toke": "",
+                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Envío al candidato · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                },
+                "select": "list",
+                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
               },
+              "module": "notion:createAPage",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Cand",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Candidato",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Deta",
+                        "type": "text",
+                        "label": "Detalle",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "ErrC",
+                        "type": "boolean",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Etap",
+                        "type": "select",
+                        "label": "Etapa",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Mode",
+                        "type": "text",
+                        "label": "Modelo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Resu",
+                        "type": "select",
+                        "label": "Resultado",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Toke",
+                        "type": "number",
+                        "label": "Tokens",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Ejecución",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 1200,
-                  "y": -150,
+                  "x": 1484,
+                  "y": -19,
                   "name": "Log OK envío → DB4"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 13,
-              "module": "google-email:sendAnEmail",
-              "version": 4,
-              "parameters": {
-                "__IMTCONN__": 10185958
-              },
               "mapper": {
                 "to": [
                   "{{ifempty(1.properties_value.Reclutador.array[1].email; 1.properties_value.Reclutador.array[1])}}"
                 ],
-                "subject": "Re: [Revisión IA] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · {{1.properties_value.`Clasificación IA`.name}} ({{1.properties_value.`Puntaje IA`}}/100)",
                 "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>✅ Se envió la invitación a <b>{{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}</b> ({{1.properties_value.`Correo electrónico`}}) el {{formatDate(now; \"DD/MM/YYYY HH:mm\"; \"America/Argentina/Buenos_Aires\")}}.</p><p>Estado en Notion: <b>Contactado</b>. Hilo Gmail del candidato: {{10.threadId}}. <a href=\"{{1.url}}\">Ver ficha</a>.</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
+                "subject": "Re: [Revisión IA] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}} · {{1.properties_value.`Clasificación IA`.name}} ({{1.properties_value.`Puntaje IA`}}/100)",
                 "bodyType": "rawHtml",
                 "emailHeaders": [
                   {
@@ -686,12 +2634,17 @@
                   }
                 ]
               },
+              "module": "google-email:sendAnEmail",
+              "version": 4,
               "metadata": {
                 "designer": {
-                  "x": 1500,
-                  "y": -150,
+                  "x": 1959,
+                  "y": -13,
                   "name": "Respuesta al reclutador en el hilo (In-Reply-To)"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10185958
               }
             }
           ]
@@ -700,26 +2653,6 @@
           "flow": [
             {
               "id": 14,
-              "module": "google-email:sendAnEmail",
-              "version": 4,
-              "parameters": {
-                "__IMTCONN__": 10185958
-              },
-              "mapper": {
-                "to": [
-                  "{{1.properties_value.`Correo electrónico`}}"
-                ],
-                "subject": "Tu postulación a {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}}",
-                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>Hola {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}},</p><p>Gracias por postularte a la búsqueda de <b>{{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}}</b> y por el tiempo que le dedicaste.</p><p>En esta oportunidad decidimos avanzar con otros perfiles que se ajustan más a lo que necesitamos hoy. Guardamos tu CV en nuestra base para tenerte en cuenta en próximas búsquedas.</p><p>Te deseamos mucho éxito.<br>Equipo de Selección</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
-                "bodyType": "rawHtml"
-              },
-              "metadata": {
-                "designer": {
-                  "x": 600,
-                  "y": 150,
-                  "name": "Email de cierre al candidato"
-                }
-              },
               "filter": {
                 "name": "C · Rechazado y sin notificar",
                 "conditions": [
@@ -741,112 +2674,555 @@
                   ]
                 ]
               },
+              "mapper": {
+                "to": [
+                  "{{1.properties_value.`Correo electrónico`}}"
+                ],
+                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>Hola {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}},</p><p>Gracias por postularte a la búsqueda de <b>{{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}}</b> y por el tiempo que le dedicaste.</p><p>En esta oportunidad decidimos avanzar con otros perfiles que se ajustan más a lo que necesitamos hoy. Guardamos tu CV en nuestra base para tenerte en cuenta en próximas búsquedas.</p><p>Te deseamos mucho éxito.<br>Equipo de Selección</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
+                "subject": "Tu postulación a {{join(map(1.properties_value.Puesto.array[1].title; \"plain_text\"); \"\")}}",
+                "bodyType": "rawHtml"
+              },
+              "module": "google-email:sendAnEmail",
               "onerror": [
                 {
                   "id": 140,
-                  "module": "notion:createAPage",
-                  "version": 1,
-                  "parameters": {
-                    "__IMTCONN__": 10767715
-                  },
                   "mapper": {
-                    "select": "list",
-                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                     "fields": {
-                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Rechazo · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                       "Cand": [
                         "{{1.id}}"
                       ],
-                      "Etap": "Rechazo",
-                      "Resu": "Error",
-                      "ErrC": true,
                       "Deta": "Falló Gmail: {{14.error.message}}",
+                      "ErrC": true,
+                      "Etap": "Rechazo",
                       "Mode": "",
-                      "Toke": ""
-                    }
+                      "Resu": "Error",
+                      "Toke": "",
+                      "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Rechazo · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                    },
+                    "select": "list",
+                    "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
                   },
+                  "module": "notion:createAPage",
+                  "version": 1,
                   "metadata": {
+                    "expect": [
+                      {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Enter a Database ID",
+                        "required": true,
+                        "validate": {
+                          "enum": [
+                            "map",
+                            "list"
+                          ]
+                        }
+                      },
+                      {
+                        "name": "database",
+                        "type": "text",
+                        "label": "Database ID",
+                        "required": true
+                      },
+                      {
+                        "name": "fields",
+                        "spec": [
+                          {
+                            "name": "Cand",
+                            "spec": {
+                              "name": "value",
+                              "type": "text",
+                              "label": "Page ID"
+                            },
+                            "type": "array",
+                            "label": "Candidato",
+                            "metadata": {
+                              "type": "relation"
+                            }
+                          },
+                          {
+                            "name": "Deta",
+                            "type": "text",
+                            "label": "Detalle",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "ErrC",
+                            "type": "boolean",
+                            "label": "Error",
+                            "metadata": {
+                              "type": "checkbox"
+                            }
+                          },
+                          {
+                            "name": "Etap",
+                            "type": "select",
+                            "label": "Etapa",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Mode",
+                            "type": "text",
+                            "label": "Modelo",
+                            "metadata": {
+                              "type": "rich_text"
+                            }
+                          },
+                          {
+                            "name": "Resu",
+                            "type": "select",
+                            "label": "Resultado",
+                            "metadata": {
+                              "type": "select"
+                            }
+                          },
+                          {
+                            "name": "Toke",
+                            "type": "number",
+                            "label": "Tokens",
+                            "metadata": {
+                              "type": "number"
+                            }
+                          },
+                          {
+                            "name": "title",
+                            "type": "text",
+                            "label": "Ejecución",
+                            "metadata": {
+                              "type": "title"
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Fields"
+                      }
+                    ],
                     "designer": {
-                      "x": 750,
-                      "y": 330,
+                      "x": 1150,
+                      "y": 845,
                       "name": "Log error Gmail → DB4"
                     }
+                  },
+                  "parameters": {
+                    "__IMTCONN__": 10767715
                   }
                 },
                 {
                   "id": 141,
-                  "module": "builtin:Break",
-                  "version": 1,
-                  "parameters": {},
                   "mapper": {
                     "count": "3",
                     "retry": "{{true}}",
                     "interval": "15"
                   },
+                  "module": "builtin:Break",
+                  "version": 1,
                   "metadata": {
                     "designer": {
-                      "x": 1050,
-                      "y": 330,
+                      "x": 1600,
+                      "y": 867,
                       "name": "Break · 3 reintentos"
                     }
-                  }
+                  },
+                  "parameters": {}
                 }
-              ]
+              ],
+              "version": 4,
+              "metadata": {
+                "designer": {
+                  "x": 778,
+                  "y": 572,
+                  "name": "Email de cierre al candidato"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10185958
+              }
             },
             {
               "id": 15,
-              "module": "notion:updateADatabaseItem",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
                 "page": "{{1.id}}",
                 "fields": {
                   "Ntfc": true,
-                  "UltE": "{{now}}"
+                  "UltE": {
+                    "start": "{{now}}",
+                    "includeTime": true
+                  }
                 },
                 "select": "list",
                 "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
                 "updateBy": "database"
               },
+              "module": "notion:updateADatabaseItem",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "updateBy",
+                    "type": "select",
+                    "label": "Update By",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "data_source",
+                        "database"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "mode": "edit",
+                    "name": "page",
+                    "type": "select",
+                    "label": "Database Item ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Aprb",
+                        "type": "boolean",
+                        "label": "Aprobado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Borr",
+                        "type": "text",
+                        "label": "Borrador de respuesta",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Busq",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Búsqueda",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "ClIA",
+                        "type": "select",
+                        "label": "Clasificación IA",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Ejec",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Ejecuciones",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Errr",
+                        "type": "text",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Falt",
+                        "type": "text",
+                        "label": "Requisitos faltantes",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Hilo",
+                        "type": "text",
+                        "label": "Hilo Gmail",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "JsIA",
+                        "type": "text",
+                        "label": "Justificación IA",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "LUHn",
+                        "type": "text",
+                        "label": "Cargo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Ntfc",
+                        "type": "boolean",
+                        "label": "Notificado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "PtIA",
+                        "type": "number",
+                        "label": "Puntaje IA",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "ResC",
+                        "type": "text",
+                        "label": "Resumen del CV",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "SjjX",
+                        "type": "number",
+                        "label": "Experiencia (años)",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "UltE",
+                        "spec": [
+                          {
+                            "name": "start",
+                            "type": "date",
+                            "label": "Start Time"
+                          },
+                          {
+                            "name": "end",
+                            "type": "date",
+                            "label": "End Time"
+                          },
+                          {
+                            "name": "includeTime",
+                            "type": "select",
+                            "label": "Include Time",
+                            "validate": {
+                              "enum": [
+                                true,
+                                false
+                              ]
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Última ejecución"
+                      },
+                      {
+                        "name": "ZfS%3F",
+                        "type": "email",
+                        "label": "Correo electrónico",
+                        "metadata": {
+                          "type": "email"
+                        }
+                      },
+                      {
+                        "name": "fpLs",
+                        "type": "text",
+                        "label": "Apellido",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "m%3D%3Eh",
+                        "type": "select",
+                        "label": "Estado",
+                        "metadata": {
+                          "type": "status"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Nombre",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 900,
-                  "y": 150,
+                  "x": 1147,
+                  "y": 572,
                   "name": "DB1 → Notificado ✓"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 16,
-              "module": "notion:createAPage",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
-                "select": "list",
-                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                 "fields": {
-                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Rechazo · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                   "Cand": [
                     "{{1.id}}"
                   ],
-                  "Etap": "Rechazo",
-                  "Resu": "OK",
-                  "ErrC": false,
                   "Deta": "Email de cierre enviado a {{1.properties_value.`Correo electrónico`}} · hilo {{14.threadId}}",
+                  "ErrC": false,
+                  "Etap": "Rechazo",
                   "Mode": "",
-                  "Toke": ""
-                }
+                  "Resu": "OK",
+                  "Toke": "",
+                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Rechazo · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                },
+                "select": "list",
+                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
               },
+              "module": "notion:createAPage",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Cand",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Candidato",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Deta",
+                        "type": "text",
+                        "label": "Detalle",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "ErrC",
+                        "type": "boolean",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Etap",
+                        "type": "select",
+                        "label": "Etapa",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Mode",
+                        "type": "text",
+                        "label": "Modelo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Resu",
+                        "type": "select",
+                        "label": "Resultado",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Toke",
+                        "type": "number",
+                        "label": "Tokens",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Ejecución",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 1200,
-                  "y": 150,
+                  "x": 1572,
+                  "y": 562,
                   "name": "Log OK rechazo → DB4"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             }
           ]
@@ -855,29 +3231,6 @@
           "flow": [
             {
               "id": 17,
-              "module": "notion:updateADatabaseItem",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
-              "mapper": {
-                "page": "{{1.id}}",
-                "fields": {
-                  "m%3D%3Eh": "Error",
-                  "Errr": "Datos incompletos:{{if(ifempty(join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\"); \"∅\") = \"∅\"; \" falta Resumen del CV;\"; \"\")}}{{if(ifempty(1.properties_value.`Correo electrónico`; \"∅\") = \"∅\"; \" falta Correo electrónico;\"; \"\")}}{{if(ifempty(1.properties_value.`Búsqueda`[].id; \"∅\") = \"∅\"; \" falta Búsqueda (relación);\"; \"\")}}",
-                  "UltE": "{{now}}"
-                },
-                "select": "list",
-                "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
-                "updateBy": "database"
-              },
-              "metadata": {
-                "designer": {
-                  "x": 600,
-                  "y": 450,
-                  "name": "DB1 → Error + datos faltantes"
-                }
-              },
               "filter": {
                 "name": "D · Pendiente con datos incompletos",
                 "conditions": [
@@ -915,61 +3268,391 @@
                     }
                   ]
                 ]
+              },
+              "mapper": {
+                "page": "{{1.id}}",
+                "fields": {
+                  "Errr": "Datos incompletos:{{if(ifempty(join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\"); \"∅\") = \"∅\"; \" falta Resumen del CV;\"; \"\")}}{{if(ifempty(1.properties_value.`Correo electrónico`; \"∅\") = \"∅\"; \" falta Correo electrónico;\"; \"\")}}{{if(ifempty(1.properties_value.`Búsqueda`[].id; \"∅\") = \"∅\"; \" falta Búsqueda (relación);\"; \"\")}}",
+                  "UltE": {
+                    "start": "{{now}}",
+                    "includeTime": true
+                  },
+                  "m%3D%3Eh": "Error"
+                },
+                "select": "list",
+                "database": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda",
+                "updateBy": "database"
+              },
+              "module": "notion:updateADatabaseItem",
+              "version": 1,
+              "metadata": {
+                "expect": [
+                  {
+                    "name": "updateBy",
+                    "type": "select",
+                    "label": "Update By",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "data_source",
+                        "database"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "mode": "edit",
+                    "name": "page",
+                    "type": "select",
+                    "label": "Database Item ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Aprb",
+                        "type": "boolean",
+                        "label": "Aprobado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Borr",
+                        "type": "text",
+                        "label": "Borrador de respuesta",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Busq",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Búsqueda",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "ClIA",
+                        "type": "select",
+                        "label": "Clasificación IA",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Ejec",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Ejecuciones",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Errr",
+                        "type": "text",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Falt",
+                        "type": "text",
+                        "label": "Requisitos faltantes",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Hilo",
+                        "type": "text",
+                        "label": "Hilo Gmail",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "JsIA",
+                        "type": "text",
+                        "label": "Justificación IA",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "LUHn",
+                        "type": "text",
+                        "label": "Cargo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Ntfc",
+                        "type": "boolean",
+                        "label": "Notificado",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "PtIA",
+                        "type": "number",
+                        "label": "Puntaje IA",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "ResC",
+                        "type": "text",
+                        "label": "Resumen del CV",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "SjjX",
+                        "type": "number",
+                        "label": "Experiencia (años)",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "UltE",
+                        "spec": [
+                          {
+                            "name": "start",
+                            "type": "date",
+                            "label": "Start Time"
+                          },
+                          {
+                            "name": "end",
+                            "type": "date",
+                            "label": "End Time"
+                          },
+                          {
+                            "name": "includeTime",
+                            "type": "select",
+                            "label": "Include Time",
+                            "validate": {
+                              "enum": [
+                                true,
+                                false
+                              ]
+                            }
+                          }
+                        ],
+                        "type": "collection",
+                        "label": "Última ejecución"
+                      },
+                      {
+                        "name": "ZfS%3F",
+                        "type": "email",
+                        "label": "Correo electrónico",
+                        "metadata": {
+                          "type": "email"
+                        }
+                      },
+                      {
+                        "name": "fpLs",
+                        "type": "text",
+                        "label": "Apellido",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "m%3D%3Eh",
+                        "type": "select",
+                        "label": "Estado",
+                        "metadata": {
+                          "type": "status"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Nombre",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
+                "designer": {
+                  "x": 588,
+                  "y": 1144,
+                  "name": "DB1 → Error + datos faltantes"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 18,
-              "module": "notion:createAPage",
-              "version": 1,
-              "parameters": {
-                "__IMTCONN__": 10767715
-              },
               "mapper": {
-                "select": "list",
-                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a",
                 "fields": {
-                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Validación de datos · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}",
                   "Cand": [
                     "{{1.id}}"
                   ],
-                  "Etap": "Validación de datos",
-                  "Resu": "Error",
-                  "ErrC": true,
                   "Deta": "Datos incompletos:{{if(ifempty(join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\"); \"∅\") = \"∅\"; \" falta Resumen del CV;\"; \"\")}}{{if(ifempty(1.properties_value.`Correo electrónico`; \"∅\") = \"∅\"; \" falta Correo electrónico;\"; \"\")}}{{if(ifempty(1.properties_value.`Búsqueda`[].id; \"∅\") = \"∅\"; \" falta Búsqueda (relación);\"; \"\")}}",
+                  "ErrC": true,
+                  "Etap": "Validación de datos",
                   "Mode": "",
-                  "Toke": ""
-                }
+                  "Resu": "Error",
+                  "Toke": "",
+                  "title": "{{formatDate(now; \"DD/MM HH:mm\"; \"America/Argentina/Buenos_Aires\")}} · Validación de datos · {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}"
+                },
+                "select": "list",
+                "database": "22c4f43e-5705-4e61-973f-ce1683f32c5a"
               },
+              "module": "notion:createAPage",
+              "version": 1,
               "metadata": {
+                "expect": [
+                  {
+                    "name": "select",
+                    "type": "select",
+                    "label": "Enter a Database ID",
+                    "required": true,
+                    "validate": {
+                      "enum": [
+                        "map",
+                        "list"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "database",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  },
+                  {
+                    "name": "fields",
+                    "spec": [
+                      {
+                        "name": "Cand",
+                        "spec": {
+                          "name": "value",
+                          "type": "text",
+                          "label": "Page ID"
+                        },
+                        "type": "array",
+                        "label": "Candidato",
+                        "metadata": {
+                          "type": "relation"
+                        }
+                      },
+                      {
+                        "name": "Deta",
+                        "type": "text",
+                        "label": "Detalle",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "ErrC",
+                        "type": "boolean",
+                        "label": "Error",
+                        "metadata": {
+                          "type": "checkbox"
+                        }
+                      },
+                      {
+                        "name": "Etap",
+                        "type": "select",
+                        "label": "Etapa",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Mode",
+                        "type": "text",
+                        "label": "Modelo",
+                        "metadata": {
+                          "type": "rich_text"
+                        }
+                      },
+                      {
+                        "name": "Resu",
+                        "type": "select",
+                        "label": "Resultado",
+                        "metadata": {
+                          "type": "select"
+                        }
+                      },
+                      {
+                        "name": "Toke",
+                        "type": "number",
+                        "label": "Tokens",
+                        "metadata": {
+                          "type": "number"
+                        }
+                      },
+                      {
+                        "name": "title",
+                        "type": "text",
+                        "label": "Ejecución",
+                        "metadata": {
+                          "type": "title"
+                        }
+                      }
+                    ],
+                    "type": "collection",
+                    "label": "Fields"
+                  }
+                ],
                 "designer": {
-                  "x": 900,
-                  "y": 450,
+                  "x": 1009,
+                  "y": 1153,
                   "name": "Log error validación → DB4"
                 }
+              },
+              "parameters": {
+                "__IMTCONN__": 10767715
               }
             },
             {
               "id": 19,
-              "module": "google-email:sendAnEmail",
-              "version": 4,
-              "parameters": {
-                "__IMTCONN__": 10185958
-              },
-              "mapper": {
-                "to": [
-                  "{{ifempty(1.properties_value.Reclutador.array[1].email; 1.properties_value.Reclutador.array[1])}}"
-                ],
-                "subject": "[Datos incompletos] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · no se pudo clasificar",
-                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>La ficha de <b>{{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}</b> quedó en estado <b>Error</b> porque faltan datos para clasificarla:</p><p><b>Datos incompletos:{{if(ifempty(join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\"); \"∅\") = \"∅\"; \" falta Resumen del CV;\"; \"\")}}{{if(ifempty(1.properties_value.`Correo electrónico`; \"∅\") = \"∅\"; \" falta Correo electrónico;\"; \"\")}}{{if(ifempty(1.properties_value.`Búsqueda`[].id; \"∅\") = \"∅\"; \" falta Búsqueda (relación);\"; \"\")}}</b></p><p>Completá la ficha en Notion y volvé a poner el Estado en <b>Pendiente</b> para que se procese: <a href=\"{{1.url}}\">abrir ficha</a>.</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
-                "bodyType": "rawHtml"
-              },
-              "metadata": {
-                "designer": {
-                  "x": 1200,
-                  "y": 450,
-                  "name": "Aviso al reclutador · datos incompletos"
-                }
-              },
               "filter": {
                 "name": "Reclutador conocido",
                 "conditions": [
@@ -980,31 +3663,114 @@
                     }
                   ]
                 ]
+              },
+              "mapper": {
+                "to": [
+                  "{{ifempty(1.properties_value.Reclutador.array[1].email; 1.properties_value.Reclutador.array[1])}}"
+                ],
+                "content": "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:640px\"><p>La ficha de <b>{{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}}</b> quedó en estado <b>Error</b> porque faltan datos para clasificarla:</p><p><b>Datos incompletos:{{if(ifempty(join(map(1.properties_value.`Resumen del CV`; \"plain_text\"); \"\"); \"∅\") = \"∅\"; \" falta Resumen del CV;\"; \"\")}}{{if(ifempty(1.properties_value.`Correo electrónico`; \"∅\") = \"∅\"; \" falta Correo electrónico;\"; \"\")}}{{if(ifempty(1.properties_value.`Búsqueda`[].id; \"∅\") = \"∅\"; \" falta Búsqueda (relación);\"; \"\")}}</b></p><p>Completá la ficha en Notion y volvé a poner el Estado en <b>Pendiente</b> para que se procese: <a href=\"{{1.url}}\">abrir ficha</a>.</p><p style=\"color:#888;font-size:12px;margin-top:24px\">Clasificador de CVs · flujo automático en Make · modelo openai/gpt-oss-120b · nada se envía a un candidato sin aprobación humana.</p></div>",
+                "subject": "[Datos incompletos] {{join(map(1.properties_value.Nombre; \"plain_text\"); \"\")}} {{join(map(1.properties_value.Apellido; \"plain_text\"); \"\")}} · no se pudo clasificar",
+                "bodyType": "rawHtml"
+              },
+              "module": "google-email:sendAnEmail",
+              "version": 4,
+              "metadata": {
+                "designer": {
+                  "x": 1416,
+                  "y": 1165,
+                  "name": "Aviso al reclutador · datos incompletos"
+                }
+              },
+              "parameters": {
+                "__IMTCONN__": 10185958
               }
             }
           ]
         }
-      ]
+      ],
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0,
+          "name": "Router por Estado"
+        }
+      }
     }
   ],
+  "name": "Entrega Final - Clasificador de CVs",
   "metadata": {
     "instant": false,
     "version": 1,
+    "designer": {
+      "orphans": [],
+      "samples": {
+        "1": {
+          "id": "3cc151a7-f4b6-80ab-9e0d-e16e0d56dd18",
+          "url": "https://app.notion.com/p/3cc151a7f4b680ab9e0de16e0d56dd18",
+          "icon": null,
+          "cover": null,
+          "object": "page",
+          "parent": {
+            "type": "database_id",
+            "database_id": "3b4151a7-f4b6-806c-a98b-d99d2bdb8fda"
+          },
+          "archived": false,
+          "in_trash": false,
+          "is_locked": false,
+          "created_by": {
+            "id": "3b0d872b-594c-81ea-8490-000298aec53b",
+            "object": "user"
+          },
+          "properties": [
+            {
+              "id": "title",
+              "type": "title",
+              "email": null,
+              "label": "Nombre",
+              "title": [],
+              "status": {
+                "id": "d38e410e-3dc7-4813-a70e-98f7a28d1c75",
+                "name": "Pendiente",
+                "color": "yellow"
+              },
+              "rich_text": []
+            }
+          ],
+          "public_url": null,
+          "is_archived": false,
+          "created_time": "2026-08-30T22:50:00.000Z",
+          "last_edited_by": {
+            "id": "3b0d872b-594c-81ea-8490-000298aec53b",
+            "object": "user"
+          },
+          "last_edited_time": "2026-08-30T22:50:00.000Z",
+          "properties_value": {
+            "Cargo": [],
+            "Nombre": [],
+            "Apellido": [],
+            "Clasificación": {
+              "id": "d38e410e-3dc7-4813-a70e-98f7a28d1c75",
+              "name": "Pendiente",
+              "color": "yellow"
+            },
+            "Correo electrónico": null,
+            "Experiencia (años)": []
+          }
+        }
+      }
+    },
     "scenario": {
-      "roundtrips": 1,
+      "dlq": true,
+      "slots": null,
+      "dataloss": false,
       "maxErrors": 3,
       "autoCommit": true,
-      "autoCommitTriggerLast": true,
+      "roundtrips": 1,
       "sequential": false,
-      "slots": null,
       "confidential": false,
-      "dataloss": false,
-      "dlq": true,
-      "freshVariables": false
-    },
-    "designer": {
-      "orphans": []
-    },
-    "zone": "us2.make.com"
+      "freshVariables": false,
+      "autoCommitTriggerLast": true
+    }
   }
 }
