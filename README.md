@@ -19,7 +19,7 @@ Ecosistema de automatización para un equipo de selección de personal. Un reclu
 | · | Estructura de datos "Salida clasificador IA" | [blueprint/data-structure-salida-ia.json](blueprint/data-structure-salida-ia.json) |
 | · | Bases de Notion (solo lectura) | [DB1 Candidatos](https://funny-mistake-467.notion.site/3b4151a7f4b6806ca98bd99d2bdb8fda) · [DB2 Búsquedas](https://funny-mistake-467.notion.site/eb4e0cc854c94913a1a5c155bcd6ec23) · [DB3 Base de conocimiento](https://funny-mistake-467.notion.site/d819394f886e47a296f4608089e706f3) · [DB4 Registro de ejecuciones](https://funny-mistake-467.notion.site/22c4f43e57054e61973fce1683f32c5a) |
 | · | Capturas de evidencia | [screenshots/](screenshots/) |
-| · | Video demo (3 min) | **PENDIENTE: link** |
+| · | Video demo (3 min) |  |
 
 ### Último paso antes de entregar (2 minutos)
 
@@ -108,19 +108,6 @@ Todos los emails de prueba van al Gmail del alumno con alias (`+lucia`, `+martin
 - [ ] Publicar las 4 bases desde la UI de Notion para que las vistas del dashboard carguen datos (2 minutos, ver arriba)
 - [ ] Video de 3 minutos
 
-## Guion del video (3 minutos)
-
-| Tiempo | Pantalla | Qué decir |
-|---|---|---|
-| 0:00–0:20 | Diagrama (doc 01) | "Es un clasificador de CVs: Notion es la memoria, Make orquesta, la IA clasifica, Gmail comunica. Nada le llega a un candidato sin que un humano apruebe." |
-| 0:20–0:50 | Notion: DB2 Búsquedas y DB3 Base de conocimiento | "Las búsquedas tienen requisitos y reclutador; la base de conocimiento es el contexto que la IA recupera (RAG). En Make no hay nada hardcodeado: todo sale de acá." |
-| 0:50–1:20 | Notion: DB1 Candidatos | "Cargo una candidata en Pendiente. Con Resumen, Correo y Búsqueda completos entra a la ruta de IA." |
-| 1:20–2:00 | Make: canvas | "Trigger cada hora, router de 4 rutas por estado, filtros con tipos correctos. Groq con max_tokens 2.000 y salida JSON. Acá el error handler: si la API falla, guarda el registro en DB4, deja la ficha en Error y hace Break con 3 reintentos." |
-| 2:00–2:30 | Make: Run once → Gmail del reclutador → Notion | "Corre, me llega el email de revisión con el puntaje y el borrador; la ficha quedó En revisión con el Thread ID. Marco Aprobado: sale el email al candidato y la respuesta al reclutador va en el mismo hilo." |
-| 2:30–2:50 | Notion: ficha sin resumen → Error · Dashboard público | "Camino infeliz: sin resumen no llama a la IA, marca qué falta y avisa. El dashboard muestra ejecuciones, tasa de errores y tokens." |
-| 2:50–3:00 | README / matriz de costos | "Costo por CV: medio centavo de dólar; el costo real es el orquestador. Repo, blueprint y documentos en GitHub." |
-
-Claves, tokens y direcciones reales quedan fuera de cámara (las conexiones de Make no se abren en el video).
 
 ## Estructura del repositorio
 
